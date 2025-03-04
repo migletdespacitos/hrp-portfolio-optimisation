@@ -47,7 +47,6 @@ The project relies on the following Python libraries:
 - [numpy](https://pypi.org/project/numpy/): Numerical computing.
 - [PyPortfolioOpt](https://pypi.org/project/PyPortfolioOpt/): Portfolio optimization library.
 
-These dependencies are listed in the `requirements.txt` file for easy installation.
 
 ## License
 
