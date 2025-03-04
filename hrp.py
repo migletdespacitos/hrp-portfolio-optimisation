@@ -8,7 +8,7 @@ from datetime import datetime
 def get_stock_data(tickers, start_date, end_date):
     tickers = [ticker.strip().upper() for ticker in tickers]
     try:
-        data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+        data = yf.download(tickers, start=start_date, end=end_date, auto_adjust=True)['Close']
         if data.empty:
             print("No data fetched. Please check the tickers and date range.")
             return pd.DataFrame()
@@ -45,15 +45,13 @@ def calculate_portfolio_metrics(data, weights):
 # Step 4: Fetch Latest Prices for Asset Allocation
 def fetch_latest_prices(tickers):
     try:
-        latest_prices = {}
-        for ticker in tickers:
-            price = yf.download(ticker, period="1d")['Adj Close']
-            if not price.empty:
-                latest_prices[ticker] = price.iloc[-1]
-            else:
-                latest_prices[ticker] = np.nan
-        latest_prices = pd.Series(latest_prices)
-        return latest_prices
+        latest_prices = yf.download(tickers, period="1d", auto_adjust=True)['Close']
+
+        # Ensure latest_prices is a Pandas Series (not DataFrame)
+        if isinstance(latest_prices, pd.DataFrame):
+            latest_prices = latest_prices.iloc[-1]  # Get the last row (latest prices)
+
+        return latest_prices.astype(float)  # Ensure values are floats
     except Exception as e:
         print(f"Error fetching latest prices: {e}")
         return pd.Series(dtype=float)
@@ -137,13 +135,19 @@ def run_hrp_portfolio():
     print("\nOptimized Portfolio Weights:")
     for ticker, weight in weights.items():
         print(f"{ticker}: {weight * 100:.2f}%")
-    
+
     print(f"\nExpected Annual Return: {expected_return * 100:.2f}%")
     print(f"Portfolio Volatility (Standard Deviation): {portfolio_volatility * 100:.2f}%")
     print(f"\nCapital Allocation based on Initial Capital (${initial_capital:,.2f}):")
-    for ticker, shares in allocation.items():
-        print(f"{ticker}: {shares:.4f} shares @ ${latest_prices[ticker]:.2f} each")
     
+    for ticker, shares in allocation.items():
+        price = latest_prices.get(ticker, np.nan)
+
+        if pd.isna(price):
+            print(f"{ticker}: Unable to retrieve price.")
+        else:
+            print(f"{ticker}: {shares:.4f} shares @ ${float(price):.2f} each")
+
     print(f"\nRemaining Cash: ${remaining_cash:.2f}")
 
 # Run the strategy with user inputs
